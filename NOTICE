@@ -1,0 +1,18 @@
+English Study VideoLingo
+Copyright 2026 Adriano and contributors
+
+This product is a modified derivative of VideoLingo by Huanshere and its
+contributors:
+https://github.com/Huanshere/VideoLingo
+
+The local fork started from upstream commit:
+814f84e (Replace dead Yunwu default with OpenRouter DeepSeek V4 Flash)
+
+VideoLingo is distributed under the Apache License, Version 2.0. The original
+license is preserved in LICENSE. This fork is independent and is not endorsed
+by the upstream maintainers.
+
+Material modifications include a Windows desktop workflow, resumable media
+cache, API cost accounting, local-first subtitle processing, adaptive ASR,
+encoder fallback, subtitle layout refinements, validation metrics and tests.
+See docs/project/fork-changes.md for the auditable inventory.

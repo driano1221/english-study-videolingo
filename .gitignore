@@ -29,6 +29,7 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+!packaging/windows/*.spec
 
 # Installer logs
 pip-log.txt
@@ -120,6 +121,7 @@ celerybeat.pid
 # Environments
 .env
 .venv
+.venv312
 env/
 venv/
 ENV/
@@ -176,3 +178,8 @@ installer_files/
 # Streamlit runtime logs from OneKeyStart.bat
 logs/
 videolingo_*.log
+
+# Local validation evidence and packaged media
+validation/
+*.mp4
+*.mkv
