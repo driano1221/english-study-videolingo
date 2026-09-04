@@ -6,6 +6,7 @@ from rich.console import Console
 import autocorrect_py as autocorrect
 from core.utils import *
 from core.utils.models import *
+from core.clean_subtitles import clean_all_subtitles
 console = Console()
 
 SUBTITLE_OUTPUT_CONFIGS = [ 
@@ -154,6 +155,7 @@ def align_timestamp_main():
     df_translate['Translation'] = df_translate['Translation'].apply(clean_translation)
     
     align_timestamp(df_text, df_translate, SUBTITLE_OUTPUT_CONFIGS, _OUTPUT_DIR)
+    clean_all_subtitles(_OUTPUT_DIR)
     console.print(Panel("[bold green]🎉📝 Subtitles generation completed! Please check in the `output` folder 👀[/bold green]"))
 
     # for audio

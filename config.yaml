@@ -11,22 +11,55 @@ display_language: "zh-CN"
 
 # API settings
 api:
-  key: 'YOUR_API_KEY'
-  base_url: 'https://openrouter.ai/api/v1'
-  model: 'deepseek/deepseek-v4-flash'
-  llm_support_json: false
+  # Stored outside this file as the VIDEOLINGO_API_KEY user environment value.
+  key: ''
+  base_url: 'https://api.deepseek.com'
+  model: 'deepseek-v4-flash'
+  llm_support_json: true
+  # DeepSeek V4 enables expensive reasoning by default; translation/JSON tasks do not need it.
+  thinking: false
+  temperature: 0.2
+  timeout_seconds: 180
+  max_output_tokens: 4096
+  # Additional attempts are limited and only transient network/rate/server errors are retried.
+  max_retries: 2
+  validation_retries: 1
+  # Stop before starting another request after this estimated per-job spend.
+  max_cost_usd: 0.10
+  # DeepSeek V4 Flash prices in USD per million tokens, checked 2026-09-03.
+  cached_input_cost_per_million_off_peak: 0.007
+  input_cost_per_million_off_peak: 0.22
+  output_cost_per_million_off_peak: 0.66
+  cached_input_cost_per_million_peak: 0.014
+  input_cost_per_million_peak: 0.44
+  output_cost_per_million_peak: 1.32
 # *Number of LLM multi-threaded accesses, set to 1 if using local LLM
-max_workers: 4
+max_workers: 8
+
+# Local-first subtitle processing. The LLM fallback is only used if the
+# deterministic splitter cannot preserve every source character.
+local_processing:
+  llm_split_fallback: true
+
+# Large ordered batches reduce a short video's translation from many requests
+# to one request while staying below the configured output-token limit.
+translation:
+  batch_chars: 6500
+  batch_max_lines: 120
+
+# Increment when prompts or linguistic algorithms change so old artifacts are
+# never mistaken for compatible cache entries.
+pipeline_cache_version: 10
 
 # Language settings, written into the prompt, can be described in natural language
-target_language: '简体中文'
+target_language: 'Português brasileiro'
 
 # Whether to use Demucs for vocal separation before transcription
 demucs: false
 
 whisper:
   # ["large-v3", "large-v3-turbo"]. Note: for zh model will force to use Belle/large-v3
-  model: 'large-v3'
+  model: 'large-v3-turbo'
   # Whisper specified recognition language ISO 639-1
   language: 'en'
   detected_language: 'en'
@@ -42,7 +75,7 @@ burn_subtitles: true
 
 ## ======================== Advanced Settings ======================== ##
 # *🔬 h264_nvenc GPU acceleration for ffmpeg, make sure your GPU supports it
-ffmpeg_gpu: false
+ffmpeg_gpu: true
 
 # *Youtube settings
 youtube:
@@ -53,7 +86,7 @@ ytb_resolution: '1080'
 
 subtitle:
   # *Maximum length of each subtitle line in characters
-  max_length: 75
+  max_length: 95
   # *Translated subtitles are slightly larger than source subtitles, affecting the reference length for subtitle splitting
   target_multiplier: 1.2
 
@@ -64,14 +97,14 @@ summary_length: 8000
 max_split_length: 20
 
 # *Whether to reflect the translation result in the original text
-reflect_translate: true
+reflect_translate: false
 
 # *Whether to pause after extracting professional terms and before translation, allowing users to manually adjust the terminology table output\log\terminology.json
 pause_before_translate: false
 
 ## ======================== Dubbing Settings ======================== ##
 # TTS selection [sf_fish_tts, openai_tts, gpt_sovits, azure_tts, fish_tts, edge_tts, custom_tts]
-tts_method: 'azure_tts'
+tts_method: 'edge_tts'
 
 # SiliconFlow FishTTS
 sf_fish_tts:

@@ -4,6 +4,7 @@ from typing import Dict, List, Tuple
 from pydub import AudioSegment
 from core.utils import *
 from core.utils.models import *
+from core.clean_subtitles import clean_word_df
 from pydub import AudioSegment
 from pydub.silence import detect_silence
 from pydub.utils import mediainfo
@@ -89,7 +90,7 @@ def get_audio_duration(audio_file: str) -> float:
         duration = 0
     return duration
 
-def split_audio(audio_file: str, target_len: float = 30*60, win: float = 60) -> List[Tuple[float, float]]:
+def split_audio(audio_file: str, target_len: float = 5*60, win: float = 30) -> List[Tuple[float, float]]:
     ## 在 [target_len-win, target_len+win] 区间内用 pydub 检测静默，切分音频
     rprint(f"[blue]🎙️ Starting audio segmentation {audio_file} {target_len} {win}[/blue]")
     audio = AudioSegment.from_file(audio_file)
@@ -208,6 +209,13 @@ def save_results(df: pd.DataFrame):
         rprint(f"[yellow]⚠️ Warning: Detected {len(long_words)} word(s) longer than 30 characters. These will be removed.[/yellow]")
         df = df[df['text'].str.len() <= 30]
     
+    # Remove stutter-like consecutive repeated words (e.g. "coating coating coating")
+    before_stutter = len(df)
+    df = clean_word_df(df)
+    after_stutter = len(df)
+    if before_stutter != after_stutter:
+        rprint(f"[blue]ℹ️ Removed {before_stutter - after_stutter} stutter/repeated word(s).[/blue]")
+
     df['text'] = df['text'].apply(lambda x: f'"{x}"')
     df.to_excel(_2_CLEANED_CHUNKS, index=False)
     rprint(f"[green]📊 Excel file saved to {_2_CLEANED_CHUNKS}[/green]")

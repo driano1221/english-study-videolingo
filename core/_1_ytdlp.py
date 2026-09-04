@@ -2,6 +2,7 @@ import os,sys
 import glob
 import json
 import re
+import shutil
 import subprocess
 from core.utils import *
 
@@ -18,15 +19,36 @@ def sanitize_filename(filename):
     return filename if filename else 'video'
 
 def update_ytdlp():
+    """Explicitly update yt-dlp.
+
+    This is intentionally not called for every video: package installation on
+    the hot path adds latency, mutates the environment, and can break an
+    otherwise reproducible run.
+    """
     try:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp"])
         if 'yt_dlp' in sys.modules:
             del sys.modules['yt_dlp']
         rprint("[green]yt-dlp updated[/green]")
     except subprocess.CalledProcessError as e:
-        rprint("[yellow]Warning: Failed to update yt-dlp: {e}[/yellow]")
+        rprint(f"[yellow]Warning: Failed to update yt-dlp: {e}[/yellow]")
     from yt_dlp import YoutubeDL
     return YoutubeDL
+
+
+def get_ytdlp():
+    """Load the already-installed yt-dlp without touching the environment."""
+    from yt_dlp import YoutubeDL
+    return YoutubeDL
+
+
+def get_js_runtimes():
+    """Enable an installed JavaScript runtime so YouTube exposes DASH formats."""
+    for runtime, executable in (("deno", "deno"), ("node", "node"), ("bun", "bun")):
+        path = shutil.which(executable)
+        if path:
+            return {runtime: {"path": path}}
+    return {}
 
 def download_video_ytdlp(url, save_path='output', resolution='1080'):
     os.makedirs(save_path, exist_ok=True)
@@ -36,21 +58,40 @@ def download_video_ytdlp(url, save_path='output', resolution='1080'):
         'noplaylist': True,
         'writethumbnail': True,
         'merge_output_format': 'mp4',
+        # YouTube media hosts occasionally close an otherwise healthy transfer.
+        # Keep the .part file and let yt-dlp resume it instead of failing the job
+        # (and redownloading everything) after the first transient timeout.
+        'continuedl': True,
+        'retries': 10,
+        'fragment_retries': 10,
+        'extractor_retries': 5,
+        'file_access_retries': 3,
+        'socket_timeout': 30,
         'postprocessors': [{'key': 'FFmpegThumbnailsConvertor', 'format': 'jpg'}],
     }
+    js_runtimes = get_js_runtimes()
+    if js_runtimes:
+        ydl_opts['js_runtimes'] = js_runtimes
+    else:
+        # Android remains a low-resolution fallback when no JS runtime exists.
+        ydl_opts['extractor_args'] = {'youtube': {'player_client': ['android']}}
 
     # Read Youtube Cookie File
     cookies_path = load_key("youtube.cookies_path")
     if os.path.exists(cookies_path):
         ydl_opts["cookiefile"] = str(cookies_path)
 
-    # Get YoutubeDL class after updating
-    YoutubeDL = update_ytdlp()
+    # Updates are handled by installation/maintenance, never per video.
+    YoutubeDL = get_ytdlp()
     with YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
     
     # Check and rename files after download
     for file in os.listdir(save_path):
+        # Never rename cache/control files. Stripping the leading dot from
+        # .videolingo_job.json made completed jobs look like legacy runs.
+        if file.startswith('.') or file == INPUT_MANIFEST:
+            continue
         if os.path.isfile(os.path.join(save_path, file)):
             filename, ext = os.path.splitext(file)
             new_filename = sanitize_filename(filename)

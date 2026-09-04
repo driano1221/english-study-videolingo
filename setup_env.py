@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 
-PYTHON_VERSION = "3.10"
+PYTHON_VERSION = "3.11"
 SCRIPT_DIR = Path(__file__).resolve().parent
 LOCAL_VENV = SCRIPT_DIR / ".venv"
 SHARED_VENV = Path.home() / ".venvs" / "videolingo"
@@ -94,7 +94,7 @@ def python_version_ok(python_exe: Path) -> bool:
     if not python_exe.is_file():
         return False
     result = subprocess.run([str(python_exe), "--version"], capture_output=True, text=True)
-    return "3.10" in (result.stdout or result.stderr)
+    return f"Python {PYTHON_VERSION}." in (result.stdout or result.stderr)
 
 
 def create_venv(path: Path, yes: bool = False) -> Path:
@@ -107,7 +107,10 @@ def create_venv(path: Path, yes: bool = False) -> Path:
 
     if path.exists():
         if not yes:
-            answer = input(f"  Existing venv at {path} is not Python 3.10. Remove and recreate it? [y/N] ").strip().lower()
+            answer = input(
+                f"  Existing venv at {path} is not Python {PYTHON_VERSION}. "
+                "Remove and recreate it? [y/N] "
+            ).strip().lower()
             if answer != "y":
                 raise SystemExit("Cancelled.")
         shutil.rmtree(path, ignore_errors=True)
@@ -115,7 +118,9 @@ def create_venv(path: Path, yes: bool = False) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     run(["uv", "venv", "--seed", "--python", PYTHON_VERSION, str(path)], cwd=SCRIPT_DIR)
     if not python_version_ok(python_exe):
-        raise SystemExit("ERROR: failed to create a Python 3.10 virtual environment")
+        raise SystemExit(
+            f"ERROR: failed to create a Python {PYTHON_VERSION} virtual environment"
+        )
     return python_exe
 
 

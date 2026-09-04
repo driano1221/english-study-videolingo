@@ -4,6 +4,7 @@ import warnings
 from core.spacy_utils.load_nlp_model import init_nlp, SPLIT_BY_CONNECTOR_FILE
 from core.utils import *
 from core.utils.models import _3_1_SPLIT_BY_NLP
+from core.clean_subtitles import clean_text_lines
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -78,6 +79,9 @@ def split_long_by_root_main(nlp):
             all_split_sentences.append(sentence.strip())
 
     punctuation = string.punctuation + "'" + '"'  # include all punctuation and apostrophe ' and "
+
+    # Remove consecutive near-duplicate sentences caused by transcription stutters
+    all_split_sentences = clean_text_lines(all_split_sentences)
 
     with open(_3_1_SPLIT_BY_NLP, "w", encoding="utf-8") as output_file:
         for i, sentence in enumerate(all_split_sentences):

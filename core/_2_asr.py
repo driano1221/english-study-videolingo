@@ -5,7 +5,7 @@ from core._1_ytdlp import find_media_file
 from core.utils.models import *
 
 @check_file_exists(_2_CLEANED_CHUNKS)
-def transcribe():
+def transcribe(inference_profile="balanced"):
     # 1. prepare audio
     media_file, media_type = find_media_file()
     if media_type == "video":
@@ -27,25 +27,33 @@ def transcribe():
     all_results = []
     runtime = load_key("whisper.runtime")
     if runtime == "local":
-        from core.asr_backend.whisperX_local import transcribe_audio as ts
-        rprint("[cyan]🎤 Transcribing audio with local model...[/cyan]")
+        from core.asr_backend.whisperX_local import WhisperSession
+        rprint("[cyan]Transcribing audio with local model...[/cyan]")
     elif runtime == "cloud":
         from core.asr_backend.whisperX_302 import transcribe_audio_302 as ts
-        rprint("[cyan]🎤 Transcribing audio with 302 API...[/cyan]")
+        rprint("[cyan]Transcribing audio with 302 API...[/cyan]")
     elif runtime == "elevenlabs":
         from core.asr_backend.elevenlabs_asr import transcribe_audio_elevenlabs as ts
-        rprint("[cyan]🎤 Transcribing audio with ElevenLabs API...[/cyan]")
+        rprint("[cyan]Transcribing audio with ElevenLabs API...[/cyan]")
 
-    for start, end in segments:
-        check_cancel()
-        result = ts(_RAW_AUDIO_FILE, vocal_audio, start, end)
-        all_results.append(result)
+    if runtime == "local":
+        with WhisperSession(_RAW_AUDIO_FILE, vocal_audio, inference_profile) as session:
+            for start, end in segments:
+                check_cancel()
+                all_results.append(session.transcribe_range(start, end))
+            combined_result = {'segments': []}
+            for result in all_results:
+                combined_result['segments'].extend(result['segments'])
+            combined_result = session.repair_gaps(combined_result)
+    else:
+        for start, end in segments:
+            check_cancel()
+            all_results.append(ts(_RAW_AUDIO_FILE, vocal_audio, start, end))
+        combined_result = {'segments': []}
+        for result in all_results:
+            combined_result['segments'].extend(result['segments'])
     
     # 5. Combine results
-    combined_result = {'segments': []}
-    for result in all_results:
-        combined_result['segments'].extend(result['segments'])
-    
     # 6. Process df
     df = process_transcription(combined_result)
     save_results(df)
